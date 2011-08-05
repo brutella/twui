@@ -147,7 +147,7 @@ typedef enum {
 
 @optional
 
-- (TUITableViewCell *)tableView:(TUITableView *)tableView headerViewForSection:(NSInteger)section;
+- (TUIView *)tableView:(TUITableView *)tableView headerViewForSection:(NSInteger)section;
 
 /**
  Default is 1 if not implemented
