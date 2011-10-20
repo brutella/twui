@@ -728,10 +728,9 @@ static NSInteger SortCells(TUITableViewCell *a, TUITableViewCell *b, void *ctx)
 				r.origin.y += relativeOffset;
 				
 				[self scrollRectToVisible:r animated:NO];
-				[savedIndexPath release];
 			}
 		}
-		
+		[savedIndexPath release];
 		return YES; // needs visible cells to be redisplayed
 	}
 	
@@ -1082,7 +1081,8 @@ static NSInteger SortCells(TUITableViewCell *a, TUITableViewCell *b, void *ctx)
 
 - (void)selectRowAtIndexPath:(TUIFastIndexPath *)indexPath animated:(BOOL)animated scrollPosition:(TUITableViewScrollPosition)scrollPosition
 {
-  TUIFastIndexPath *oldIndexPath = [self indexPathForSelectedRow];  
+  // retain here, selected index path released in deselectRowAtIndexPath:animated: 
+  TUIFastIndexPath *oldIndexPath = [[self indexPathForSelectedRow] retain]; 
 	if([indexPath isEqual:oldIndexPath]) {
 		// just scroll to visible
 	} else {
@@ -1090,7 +1090,7 @@ static NSInteger SortCells(TUITableViewCell *a, TUITableViewCell *b, void *ctx)
 		
 		TUITableViewCell *cell = [self cellForRowAtIndexPath:indexPath]; // may be nil
 		[cell setSelected:YES animated:animated];
-		[_selectedIndexPath release]; // should already be nil
+        // _selectedIndexPath already released in deselectRowAtIndexPath:animated
 		_selectedIndexPath = [indexPath retain];
 		[cell setNeedsDisplay];
 		
@@ -1106,7 +1106,8 @@ static NSInteger SortCells(TUITableViewCell *a, TUITableViewCell *b, void *ctx)
     // only make cell first responder if the table view already is first responder
     [self _makeRowAtIndexPathFirstResponder:indexPath];
   }
-	[self scrollToRowAtIndexPath:indexPath atScrollPosition:scrollPosition animated:animated];
+  [self scrollToRowAtIndexPath:indexPath atScrollPosition:scrollPosition animated:animated];
+  [oldIndexPath release];
 }
 
 - (void)deselectRowAtIndexPath:(TUIFastIndexPath *)indexPath animated:(BOOL)animated
