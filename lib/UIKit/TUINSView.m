@@ -129,6 +129,28 @@
 	}
 }
 
+- (void)_updateLayerScaleFactor {
+	if([self window] != nil) {
+		CGFloat scale = 1.0f;
+		if([[self window] respondsToSelector:@selector(backingScaleFactor)]) {
+			scale = [[self window] backingScaleFactor];
+		}
+		
+		if([self.layer respondsToSelector:@selector(setContentsScale:)]) {
+			if(fabs(self.layer.contentsScale - scale) > 0.1f) {
+				self.layer.contentsScale = scale;
+			}
+		}
+		
+		[self.rootView _updateLayerScaleFactor];
+	}
+}
+
+- (void)screenProfileOrBackingPropertiesDidChange:(NSNotification *)notification
+{
+	[self performSelector:@selector(_updateLayerScaleFactor) withObject:nil afterDelay:0.0]; // the window's backingScaleFactor doesn't update until after this notification fires (10.8) - so delay it a bit.
+}
+
 - (TUIView *)viewForLocalPoint:(NSPoint)p
 {
 	return [rootView hitTest:p withEvent:nil];
