@@ -24,3 +24,5 @@
 - (TUITextRenderer *)textRendererAtPoint:(CGPoint)point;
 
 @end
+
+extern CGFloat TUICurrentContextScaleFactor(void);

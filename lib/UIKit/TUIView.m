@@ -18,6 +18,7 @@
 #import "TUIKit.h"
 #import "TUIView+Private.h"
 #import "TUIViewController.h"
+#import <pthread.h>
 
 CGRect(^TUIViewCenteredLayout)(TUIView*) = nil;
 
@@ -72,9 +73,13 @@ CGRect(^TUIViewCenteredLayout)(TUIView*) = nil;
 	}
 }
 
+static pthread_key_t TUICurrentContextScaleFactorTLSKey;
+
 + (void)initialize
 {
 	if(self == [TUIView class]) {
+		pthread_key_create(&TUICurrentContextScaleFactorTLSKey, free);
+
 		TUIViewCenteredLayout = [^(TUIView *v) {
 			TUIView *superview = v.superview;
 			CGRect b = superview.frame;
@@ -244,6 +249,31 @@ extern CGFloat Screen_Scale;
 	}
 	
 	return _context.context;
+}
+
+CGFloat TUICurrentContextScaleFactor(void)
+{
+	/*
+	 Key is set up in +initialize
+	 Use TLS rather than a simple global so drawsInBackground should continue to work (views in the same process may be drawing destined for different windows on different screens with different scale factors).
+	 */
+	CGFloat *v = pthread_getspecific(TUICurrentContextScaleFactorTLSKey);
+	if(v)
+		return *v;
+	return 1.0;
+}
+
+static void BogusFunctionToSilenceStaticAnalyzer(void *x) { }
+
+static void TUISetCurrentContextScaleFactor(CGFloat s)
+{
+	CGFloat *v = pthread_getspecific(TUICurrentContextScaleFactorTLSKey);
+	if(!v) {
+		v = malloc(sizeof(CGFloat));
+		pthread_setspecific(TUICurrentContextScaleFactorTLSKey, v);
+	}
+	*v = s;
+	BogusFunctionToSilenceStaticAnalyzer(v);
 }
 
 - (void)displayLayer:(CALayer *)layer
