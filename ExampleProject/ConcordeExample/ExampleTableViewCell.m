@@ -55,10 +55,12 @@
 	CGRect b = self.bounds;
 	CGContextRef ctx = TUIGraphicsGetCurrentContext();
 	
+    TUIColor *color = [TUIColor blackColor];
 	if(self.selected) {
 		// selected background
 		CGContextSetRGBFillColor(ctx, .87, .87, .87, 1);
 		CGContextFillRect(ctx, b);
+        color = [TUIColor whiteColor];
 	} else {
 		// light gray background
 		CGContextSetRGBFillColor(ctx, .97, .97, .97, 1);
@@ -74,6 +76,7 @@
 	// text
 	CGRect textRect = CGRectOffset(b, 15, -15);
 	textRenderer.frame = textRect; // set the frame so it knows where to draw itself
+    [(TUIAttributedString*)textRenderer.attributedString setColor:color];
 	[textRenderer draw];
 	
 }
