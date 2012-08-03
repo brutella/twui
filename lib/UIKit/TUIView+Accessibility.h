@@ -20,5 +20,7 @@
 @property (nonatomic, assign) CGRect accessibilityFrame; // accessibilityFrame should be in screen coordinates
 
 - (NSArray *)accessibleSubviews;
+- (NSString *)accessibilityTraitsToRole;
+- (NSString *)accessibilityTraitsToRoleDescription;
 
 @end

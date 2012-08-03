@@ -20,6 +20,14 @@
 #import "TUITooltipWindow.h"
 #import <CoreFoundation/CoreFoundation.h>
 
+@interface TUINSView ()
+- (void)windowDidResignKey:(NSNotification *)notification;
+- (void)windowDidBecomeKey:(NSNotification *)notification;
+- (void)screenProfileOrBackingPropertiesDidChange:(NSNotification *)notification;
+- (void)_updateLayerScaleFactor;
+@end
+
+
 @implementation TUINSView
 
 @synthesize rootView;
@@ -34,6 +42,12 @@
 
 - (void)dealloc
 {
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:nil];
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
+	
+	[rootView removeFromSuperview];
+    rootView.nsView = nil;
+	
 	rootView = nil;
 	_hoverView = nil;
 	_trackingView = nil;
@@ -49,6 +63,11 @@
 }
 		 
 - (void)ab_setIsOpaque:(BOOL)o
+{
+	opaque = o;
+}
+
+- (void)tui_setOpaque:(BOOL)o
 {
 	opaque = o;
 }
@@ -116,18 +135,57 @@
 	CALayer *layer = [self layer];
 	[layer setDelegate:self];
 	[layer addSublayer:rootView.layer];
-	if(Screen_Scale != 1.0) {
-		layer.anchorPoint = CGPointMake(0, 0);
-		layer.transform = CATransform3DMakeScale(Screen_Scale, Screen_Scale, Screen_Scale);
+	
+	[self _updateLayerScaleFactor];
+}
+
+- (void)setNextResponder:(NSResponder *)r
+{
+	NSResponder *nextResponder = [self nextResponder];
+	if([nextResponder isKindOfClass:[NSViewController class]]) {
+		// keep view controller in chain
+		[nextResponder setNextResponder:r];
+	} else {
+		[super setNextResponder:r];
+	}
+}
+
+- (void)viewWillMoveToWindow:(NSWindow *)newWindow {
+	if(self.window != nil) {
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidChangeScreenProfileNotification object:self.window];
+	}
+	
+	if(newWindow != nil && rootView.layer.superlayer != [self layer]) {
+		rootView.layer.frame = self.layer.bounds;
+		[[self layer] addSublayer:rootView.layer];
+	}
+	
+	[self.rootView willMoveToWindow:(TUINSWindow *) newWindow];
+	
+	if(newWindow == nil) {
+		[rootView removeFromSuperview];
 	}
 }
 
 - (void)viewDidMoveToWindow
 {
-	if(self.window != nil && rootView.layer.superlayer != [self layer]) {
-		[[self layer] addSublayer:rootView.layer];
+	[self _updateLayerScaleFactor];
+	
+	[self.rootView didMoveToWindow];
+	
+	if(self.window != nil) {
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidResignKey:) name:NSWindowDidResignKeyNotification object:self.window];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:self.window];
+		
+		// make sure the window will post NSWindowDidChangeScreenProfileNotification
+		[self.window setDisplaysWhenScreenProfileChanges:YES];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenProfileOrBackingPropertiesDidChange:) name:NSWindowDidChangeScreenProfileNotification object:self.window];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenProfileOrBackingPropertiesDidChange:) name:NSWindowDidChangeBackingPropertiesNotification object:self.window];
 	}
 }
+
 
 - (void)_updateLayerScaleFactor {
 	if([self window] != nil) {
@@ -169,6 +227,39 @@
 - (TUIView *)viewForEvent:(NSEvent *)event
 {
 	return [self viewForLocationInWindow:[event locationInWindow]];
+}
+
+- (void)windowDidResignKey:(NSNotification *)notification
+{
+	[TUITooltipWindow endTooltip];
+	
+	if(![self isWindowKey]) {
+		[self.rootView windowDidResignKey];
+	}
+}
+
+- (void)windowDidBecomeKey:(NSNotification *)notification
+{
+	[self.rootView windowDidBecomeKey];
+}
+
+- (BOOL)isWindowKey
+{
+	if([self.window isKeyWindow]) return YES;
+	
+	NSWindow *keyWindow = [NSApp keyWindow];
+	if(keyWindow == nil) return NO;
+	
+	return keyWindow == [self.window attachedSheet];
+}
+
+- (void)viewWillMoveToSuperview:(NSView *)newSuperview
+{
+	[super viewWillMoveToSuperview:newSuperview];
+	
+	if(newSuperview == nil) {
+		[TUITooltipWindow endTooltip];
+	}
 }
 
 - (void)_updateHoverView:(TUIView *)_newHoverView withEvent:(NSEvent *)event

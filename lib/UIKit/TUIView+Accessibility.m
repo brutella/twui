@@ -8,11 +8,6 @@
 
 #import "TUIView+Accessibility.h"
 
-@interface TUIView ()
-- (NSString *)accessibilityTraitsToRole;
-- (NSString *)accessibilityTraitsToRoleDescription;
-@end
-
 
 @implementation TUIView (Accessibility)
 
@@ -107,7 +102,7 @@
 {
     static NSArray *attributes = nil;
     if(attributes == nil) {
-		attributes = [[NSArray alloc] initWithObjects:NSAccessibilityRoleAttribute, NSAccessibilityRoleDescriptionAttribute, NSAccessibilityFocusedAttribute, NSAccessibilityChildrenAttribute, NSAccessibilityParentAttribute, NSAccessibilityWindowAttribute, NSAccessibilityTopLevelUIElementAttribute, NSAccessibilityPositionAttribute, NSAccessibilitySizeAttribute, NSAccessibilityDescriptionAttribute, NSAccessibilityValueAttribute, NSAccessibilityTitleAttribute, nil];
+		attributes = [[NSArray alloc] initWithObjects:NSAccessibilityRoleAttribute, NSAccessibilityRoleDescriptionAttribute, NSAccessibilityFocusedAttribute, NSAccessibilityChildrenAttribute, NSAccessibilityParentAttribute, NSAccessibilityWindowAttribute, NSAccessibilityTopLevelUIElementAttribute, NSAccessibilityPositionAttribute, NSAccessibilitySizeAttribute, NSAccessibilityDescriptionAttribute, NSAccessibilityValueAttribute, NSAccessibilityTitleAttribute, NSAccessibilityEnabledAttribute, nil];
     }
 	
     return attributes;
@@ -141,7 +136,9 @@
 		return self.accessibilityValue;
 	} else if([attribute isEqualToString:NSAccessibilityTitleAttribute]) {
 		return self.accessibilityLabel;
-	} else {
+	} else if([attribute isEqualToString:NSAccessibilityEnabledAttribute]) {
+		return [NSNumber numberWithBool:self.userInteractionEnabled];
+	}else {
 		return nil;
     }
 }
@@ -197,6 +194,10 @@
 - (NSArray *)accessibleSubviews
 {
 	NSMutableArray *accessibleSubviews = [NSMutableArray array];
+	for(TUITextRenderer *renderer in self.textRenderers) {
+		[accessibleSubviews addObject:renderer];
+	}
+	
 	for(TUIView *view in self.subviews) {
 		if([view isAccessibilityElement]) {
 			[accessibleSubviews addObject:view];
